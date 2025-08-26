@@ -1,11 +1,11 @@
-from django.test import TestCase
+from django.test import TransactionTestCase
 
 from car.models import Car
 from main import serialize_car_object, deserialize_car_object
 from car.serializers import CarSerializer
 
 
-class TestSerializer(TestCase):
+class TestSerializer(TransactionTestCase):
 
     def setUp(self) -> None:
         self.payload = {
@@ -77,7 +77,7 @@ class TestSerializer(TestCase):
         self.assertTrue(serializer.is_valid())
 
 
-class TestSerializerFunctions(TestCase):
+class TestSerializerFunctions(TransactionTestCase):
 
     def setUp(self) -> None:
         self.payload = {

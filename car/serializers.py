@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 MIN_HP = 50
 MAX_HP = 1000
 
+
 class CarSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     manufacturer = serializers.CharField(max_length=64)

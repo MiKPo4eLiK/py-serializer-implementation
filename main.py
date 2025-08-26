@@ -13,4 +13,3 @@ def deserialize_car_object(json_data: str) -> Car:
     serializer = CarSerializer(data=car_data)
     serializer.is_valid(raise_exception=True)
     return serializer.save()
-python manage.py makemigrations

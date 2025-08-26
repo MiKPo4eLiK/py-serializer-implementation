@@ -5,6 +5,7 @@ from car.serializers import CarSerializer
 class Car:
     def __init__(self, manufacturer, model, horse_powers,
                  is_broken, problem_description=None) -> None:
+        self.id = id
         self.manufacturer = manufacturer
         self.model = model
         self.horse_powers = horse_powers

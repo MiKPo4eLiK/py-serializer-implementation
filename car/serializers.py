@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 MIN_HP = 50
 MAX_HP = 1000
 
+
 class CarSerializer(serializers.Serializer):
     manufacturer = serializers.CharField(max_length=64)
     model = serializers.CharField(max_length=64)
@@ -14,7 +15,8 @@ class CarSerializer(serializers.Serializer):
         ]
     )
     is_broken = serializers.BooleanField()
-    problem_description = serializers.CharField(required=False, allow_null=True)
+    problem_description = serializers.CharField(
+        required=False, allow_null=True)
 
     def create(self, validated_data) -> dict:
         return validated_data

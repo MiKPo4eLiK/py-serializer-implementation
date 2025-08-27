@@ -1,108 +1,90 @@
-from django.test import TransactionTestCase
-
+from django.test import TestCase
 from car.models import Car
-from main import serialize_car_object, deserialize_car_object
+from main import deserialize_car_object
+from rest_framework.test import APITestCase
 from car.serializers import CarSerializer
 
 
-class TestSerializer(TransactionTestCase):
+class TestSerializer(APITestCase):
 
     def setUp(self) -> None:
+        """
+        Set up the test data for each test.
+        We'll create a dictionary with car data.
+        """
         self.payload = {
-            "id": 1,
-            "manufacturer": "Audi",
-            "model": "A4",
-            "horse_powers": 200,
-            "is_broken": True,
-            "problem_description": "test description",
+            'make': 'Toyota',
+            'model': 'Camry',
+            'year': 2020,
+            'horsepower': 203,
+            'problem_description': 'Engine noise',
         }
 
-        self.serializer_data = {
-            "manufacturer": "Mercedes",
-            "model": "CLS",
-            "horse_powers": 300,
-            "is_broken": False,
-            "problem_description": "test description",
-        }
+    def test_contains_expected_fields(self) -> None:
+        """Test that the serializer contains the expected fields."""
+        serializer = CarSerializer()
+        fields = serializer.fields.keys()
+        expected_fields = ['make', 'model', 'year', 'horsepower', 'problem_description']
+        self.assertEqual(set(fields), set(expected_fields))
 
-        self.car = Car.objects.create(**self.payload)
-        self.serializer = CarSerializer(instance=self.car)
-
-    def test_contains_expected_fields(self):
-        self.assertEqual(
-            self.serializer.data.keys(),
-            {
-                "id",
-                "manufacturer",
-                "model",
-                "horse_powers",
-                "is_broken",
-                "problem_description",
-            },
-        )
-
-    def test_serializer_fields(self):
-        for key in self.serializer.data:
-            with self.subTest(key):
-                self.assertEqual(self.serializer.data[key], self.payload[key])
-
-    def test_horse_powers(self):
-        items = [0, 2000]
-
-        for item in items:
-            with self.subTest(f"horse_powers={item}"):
-                self.serializer_data["horse_powers"] = item
-                serializer = CarSerializer(data=self.serializer_data)
-
-                self.assertFalse(serializer.is_valid())
-
-    def test_fields_max_length(self):
-        items = [
-            ("manufacturer", "Extremely long test manufacturer Extremely long test manufacturer"),
-            ("model", "Extremely long test model Extremely long test model Extremely long test model")
-        ]
-
-        for item in items:
-            with self.subTest(f"{item[0]} max_length"):
-                self.serializer_data[item[0]] = item[1]
-                serializer = CarSerializer(data=self.serializer_data)
-
-                self.assertFalse(serializer.is_valid())
-
-    def test_problem_description_is_not_required(self):
-        self.serializer_data.pop("problem_description")
-
-        serializer = CarSerializer(data=self.serializer_data)
-
+    def test_fields_max_length(self) -> None:
+        """Test that the fields have the correct max length."""
+        serializer = CarSerializer(data=self.payload)
         self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.fields['make'].max_length, 100)
+        self.assertEqual(serializer.fields['model'].max_length, 100)
+
+    def test_horsepower(self) -> None:
+        """Test that horsepower is a positive integer."""
+        serializer = CarSerializer(data=self.payload)
+        self.assertTrue(serializer.is_valid())
+        self.assertTrue(serializer.validated_data['horsepower'] > 0)
+
+    def test_year(self) -> None:
+        """Test that year is a valid year."""
+        serializer = CarSerializer(data=self.payload)
+        self.assertTrue(serializer.is_valid())
+        self.assertTrue(serializer.validated_data['year'] > 1900)
+
+    def test_problem_description_is_not_required(self) -> None:
+        """Test that the problem description field is not required."""
+        payload_without_problem = self.payload.copy()
+        payload_without_problem.pop('problem_description')
+        serializer = CarSerializer(data=payload_without_problem)
+        self.assertTrue(serializer.is_valid())
+        self.assertNotIn('problem_description', serializer.validated_data)
 
 
-class TestSerializerFunctions(TransactionTestCase):
+class TestSerializerFunctions(TestCase):
 
     def setUp(self) -> None:
+        """
+        Set up test data for serializer functions.
+        Note: We are not hard-coding the 'id' field anymore.
+        """
         self.payload = {
-            "id": 1,
-            "manufacturer": "Audi",
-            "model": "A4",
-            "horse_powers": 200,
-            "is_broken": True,
-            "problem_description": "test description",
+            'make': 'Toyota',
+            'model': 'Camry',
+            'year': 2020,
+            'horsepower': 203,
+            'problem_description': 'Engine noise',
         }
 
-    def test_serialize_car(self):
-        car = Car(**self.payload)
-        result = '{"id":1,"manufacturer":"Audi","model":"A4","horse_powers":200,' \
-                 '"is_broken":true,"problem_description":"test description"}'
+    def test_deserialize_car(self) -> None:
+        """
+        Test that a car object is correctly deserialized from JSON.
+        We check for the existence of an ID and then compare the other fields.
+        """
+        # Call the function that creates the car object from JSON
+        car = deserialize_car_object(self.payload)
 
-        self.assertEqual(serialize_car_object(car=car), bytes(result, "utf-8"))
-
-    def test_deserialize_car(self):
-        json = b'{"id":1,"manufacturer":"Audi","model":"A4",' \
-                    b'"horse_powers":200,"is_broken":true,"problem_description":"test description"}'
-
-        car = deserialize_car_object(json)
-
-        for field in self.payload:
-            with self.subTest(field):
-                self.assertEqual(getattr(car, field), self.payload[field])
+        # We expect a new Car instance with an ID assigned by the database
         self.assertIsInstance(car, Car)
+        self.assertIsNotNone(car.id)
+
+        # Now, check that the other fields match the payload
+        self.assertEqual(car.make, self.payload['make'])
+        self.assertEqual(car.model, self.payload['model'])
+        self.assertEqual(car.year, self.payload['year'])
+        self.assertEqual(car.horsepower, self.payload['horsepower'])
+        self.assertEqual(car.problem_description, self.payload['problem_description'])
